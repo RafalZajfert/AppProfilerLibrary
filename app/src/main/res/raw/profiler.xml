@@ -1,0 +1,82 @@
+<app activity="software.rsquared.appprofiler.sample.MainActivity">
+	<config>
+
+		<!-- field Type
+		select
+		multiselect
+		check
+		radio
+		text
+		-->
+
+		<!--
+		int
+		long
+		boolean
+		string
+		float
+		double
+		-->
+
+		<field
+			name="abc"
+			description="zxc"
+			id="1"
+			type="multiselect">
+			<option
+				default="true"
+				type="int">1
+			</option>
+			<option type="int">2</option>
+			<option
+				default="true"
+				type="int">3
+			</option>
+		</field>
+
+		<field
+			name="abc"
+			description="zxc"
+			id="2"
+			type="select">
+			<option type="boolean">true</option>
+			<option type="boolean">false</option>
+		</field>
+
+		<field
+			name="abc"
+			description="zxc"
+			id="3"
+			type="check">
+			<option>Comfort</option>
+		</field>
+
+		<field
+			name="abc"
+			description="zxc"
+			id="4"
+			type="radio">
+			<option default="true">true</option>
+			<option>false</option>
+		</field>
+
+		<field
+			name="abc"
+			description="zxc"
+			id="5"
+			type="text">
+			<option default="http"/>
+		</field>
+	</config>
+
+	<profiles>
+		<profile name="prod">
+			<value id="1">1</value>
+			<value id="1">2</value>
+			<value id="2">false</value>
+			<value id="3">Comfort</value>
+			<value id="4">true</value>
+			<value id="5">https</value>
+		</profile>
+	</profiles>
+</app>
