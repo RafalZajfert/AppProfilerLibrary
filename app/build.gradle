@@ -28,6 +28,6 @@ android {
 dependencies {
     implementation 'com.android.support:appcompat-v7:25.4.0'
 
-    implementation 'software.rsquared:app-profiler:1.0.0'
-    annotationProcessor 'software.rsquared:app-profiler-processor:1.0.0'
+    implementation project(':appprofiler')
+    annotationProcessor project(':appprofiler-processor')
 }

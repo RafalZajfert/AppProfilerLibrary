@@ -31,6 +31,8 @@ class AppProfilerActivityGenerator extends Generator {
 	private static final ClassName classColor = ClassName.get("android.graphics", "Color");
 	private static final ClassName classBundle = ClassName.get("android.os", "Bundle");
 	private static final ClassName classHandler = ClassName.get("android.os", "Handler");
+	private static final ClassName classMotionEvent = ClassName.get("android.view", "MotionEvent");
+	private static final ClassName classOnTouchListener = ClassName.get("android.view.View", "OnTouchListener");
 	private static final ClassName classLooper = ClassName.get("android.os", "Looper");
 	private static final ClassName classAlertDialog = ClassName.get("android.support.v7.app", "AlertDialog");
 	private static final ClassName classAppCompatActivity = ClassName.get("android.support.v7.app", "AppCompatActivity");
@@ -63,7 +65,7 @@ class AppProfilerActivityGenerator extends Generator {
 					.addModifiers(Modifier.PUBLIC, Modifier.FINAL)
 					.superclass(classAppCompatActivity);
 
-			classAppProfiler= ClassName.get(profilerDescription.getPackageName(), "AppProfiler");
+			classAppProfiler = ClassName.get(profilerDescription.getPackageName(), "AppProfiler");
 			if (profilerDescription.isActive()) {
 				TypeSpec listenerSpec = TypeSpec.anonymousClassBuilder("")
 						.addSuperinterface(classViewOnFocusChangeListener)
@@ -77,6 +79,18 @@ class AppProfilerActivityGenerator extends Generator {
 								.endControlFlow()
 								.build())
 						.build();
+				TypeSpec touchListenerSpec = TypeSpec.anonymousClassBuilder("")
+						.addSuperinterface(classOnTouchListener)
+						.addMethod(MethodSpec.methodBuilder("onTouch")
+								.addAnnotation(Override.class)
+								.returns(boolean.class)
+								.addModifiers(Modifier.PUBLIC)
+								.addParameter(classView, "v")
+								.addParameter(classMotionEvent, "event")
+								.addStatement("return true")
+								.build())
+						.build();
+
 				TypeSpec autoCloseRunnableSpec = TypeSpec.anonymousClassBuilder("")
 						.addSuperinterface(Runnable.class)
 						.addField(FieldSpec.builder(int.class, "time", Modifier.PRIVATE).initializer("5").build())
@@ -86,7 +100,7 @@ class AppProfilerActivityGenerator extends Generator {
 								.beginControlFlow("if (time > 0)")
 								.addStatement("time--")
 								.beginControlFlow("if (dialogChangeButton != null)")
-								.addStatement("dialogChangeButton.setText(\"Yes (\" + time + \")\")")
+								.addStatement("dialogChangeButton.setText(\"Start (\" + time + \")\")")
 								.endControlFlow()
 								.addStatement("handler.postDelayed(this, 1000)")
 								.endControlFlow()
@@ -103,6 +117,7 @@ class AppProfilerActivityGenerator extends Generator {
 
 				activityClass.addField(FieldSpec.builder(classLinearLayoutCompat, "linearLayout", Modifier.PRIVATE).build());
 				activityClass.addField(FieldSpec.builder(classTextView, "disabledTextView", Modifier.PRIVATE).build());
+				activityClass.addField(FieldSpec.builder(classTextView, "profileTextView", Modifier.PRIVATE).build());
 
 				for (FieldDescription fieldDescription : profilerDescription.getFields()) {
 					activityClass.addField(FieldSpec.builder(getFieldViewClass(fieldDescription), fieldDescription.getCamelCaseName() + "ValueView", Modifier.PRIVATE).build());
@@ -113,6 +128,7 @@ class AppProfilerActivityGenerator extends Generator {
 				activityClass.addField(FieldSpec.builder(classHandler, "handler", Modifier.PRIVATE).initializer("new $T($T.myLooper())", classHandler, classLooper).build());
 				activityClass.addField(FieldSpec.builder(Runnable.class, "autoCloseRunnable", Modifier.PRIVATE).initializer("$L", autoCloseRunnableSpec).build());
 				activityClass.addField(FieldSpec.builder(classViewOnFocusChangeListener, "focusListener", Modifier.PRIVATE).initializer("$L", listenerSpec).build());
+				activityClass.addField(FieldSpec.builder(classOnTouchListener, "touchListener", Modifier.PRIVATE).initializer("$L", touchListenerSpec).build());
 			}
 
 			activityClass.addMethod(generateOnCreateMethod(profilerDescription));
@@ -181,6 +197,7 @@ class AppProfilerActivityGenerator extends Generator {
 
 			spec.addCode("\n");
 			spec.addStatement("addOptionProfiles()");
+			spec.addStatement("addSeparator()");
 
 			spec.addCode("\n");
 			spec.addStatement("disabledTextView = new $1T(this)", classTextView);
@@ -193,16 +210,22 @@ class AppProfilerActivityGenerator extends Generator {
 
 			for (FieldDescription fieldDescription : profilerDescription.getFields()) {
 				spec.addStatement("addOption$L()", fieldDescription.getCapitalizedCamelCaseName());
-				spec.addStatement("addSeparator()");
-				spec.addCode("\n");
 			}
 
+			spec.addCode("\n");
 			spec.addStatement("setContentView(scrollView)");
 			spec.addCode("\n");
 			spec.addStatement("setupProfile($T.getProfile())", classAppProfiler);
+			spec.addCode("\n");
 
+			List<String> profiles = new ArrayList<>();
+			for (ProfileDescription profileDescription : profilerDescription.getProfiles()) {
+				profiles.add(profileDescription.getName());
+			}
+			profiles.add("Custom");
+			spec.addStatement("final $1T[] values = new $1T[]{$2L}", String.class, "\"" + String.join("\", \"", profiles) + "\"");
 
-			TypeSpec dialogNoListenerSpec = TypeSpec.anonymousClassBuilder("")
+			TypeSpec dialogYesListenerSpec = TypeSpec.anonymousClassBuilder("")
 					.addSuperinterface(classDialogInterfaceOnClickListener)
 					.addMethod(MethodSpec.methodBuilder("onClick")
 							.addAnnotation(Override.class)
@@ -215,7 +238,8 @@ class AppProfilerActivityGenerator extends Generator {
 							.build())
 					.build();
 
-			TypeSpec dialogYesListenerSpec = TypeSpec.anonymousClassBuilder("")
+
+			TypeSpec dialogEditListenerSpec = TypeSpec.anonymousClassBuilder("")
 					.addSuperinterface(classDialogInterfaceOnClickListener)
 					.addMethod(MethodSpec.methodBuilder("onClick")
 							.addAnnotation(Override.class)
@@ -237,13 +261,32 @@ class AppProfilerActivityGenerator extends Generator {
 							.build())
 					.build();
 
-			spec.addCode("\n");
+
+			TypeSpec dialogListenerSpec = TypeSpec.anonymousClassBuilder("")
+					.addSuperinterface(classDialogInterfaceOnClickListener)
+					.addMethod(MethodSpec.methodBuilder("onClick")
+							.addAnnotation(Override.class)
+							.addModifiers(Modifier.PUBLIC)
+							.addParameter(classDialogInterface, "dialog")
+							.addParameter(int.class, "which")
+							.addStatement("$T value = values[which]", String.class)
+							.addStatement("$T.setProfile(value)", classAppProfiler)
+							.addStatement("profileTextView.setText(value)")
+							.addStatement("setupProfile(value)")
+							.addStatement("handler.removeCallbacks(autoCloseRunnable)")
+							.addStatement("dialog.dismiss()")
+							.beginControlFlow("if(which < values.length - 1)")
+							.addStatement("closeProfiler()")
+							.endControlFlow()
+							.build())
+					.build();
+
 			spec.addStatement("$1T.Builder builder = new $1T.Builder(this)", classAlertDialog)
-					.addStatement("builder.setTitle($S + $T.getProfile())", "Profile: ", classAppProfiler)
-					.addStatement("builder.setMessage($S)", " Do you want to change it?")
+					.addStatement("builder.setTitle($S)", "Profile")
 					.addStatement("builder.setCancelable(false)")
-					.addStatement("builder.setNeutralButton($S, $L)", "No", dialogNoListenerSpec)
-					.addStatement("builder.setPositiveButton($S, $L)", "Yes (5)", dialogYesListenerSpec)
+					.addStatement("builder.setSingleChoiceItems(values, $T.asList(values).indexOf($T.getProfile()), $L)", Arrays.class, classAppProfiler, dialogListenerSpec)
+					.addStatement("builder.setPositiveButton($S, $L)", "Start (5)", dialogYesListenerSpec)
+					.addStatement("builder.setNeutralButton($S, $L)", "Edit", dialogEditListenerSpec)
 					.addStatement("$T dialog = builder.create()", classAlertDialog)
 					.addStatement("dialog.setOnShowListener($L)", showListenerSpec)
 					.addStatement("dialog.show()");
@@ -338,7 +381,9 @@ class AppProfilerActivityGenerator extends Generator {
 		spec.addStatement("break");
 		spec.endControlFlow();
 		spec.beginControlFlow("for (int i = 2; i < linearLayout.getChildCount(); i++)");
-		spec.addStatement("linearLayout.getChildAt(i).setEnabled(enabled)");
+		spec.addStatement("$T child = linearLayout.getChildAt(i)", classView);
+		spec.addStatement("child.setOnTouchListener(enabled ? null : touchListener)");
+		spec.addStatement("child.setAlpha(enabled ? 1f : 0.6f)");
 		spec.endControlFlow();
 		spec.addStatement("disabledTextView.setVisibility(!enabled ? $1T.VISIBLE : $1T.GONE)", classView);
 		return spec.build();
@@ -409,6 +454,7 @@ class AppProfilerActivityGenerator extends Generator {
 		spec.addStatement("titleTextView.setText(title)");
 		spec.addStatement("titleTextView.setTextColor(TEXT_LIGHT_COLOR)");
 		spec.addStatement("titleTextView.setTextSize($T.COMPLEX_UNIT_SP, 16)", classTypedValue);
+		spec.addStatement("titleTextView.setPadding(0, ($T)(12 * dp), 0, 0)", int.class);
 		spec.addStatement("linearLayout.addView(titleTextView)");
 		spec.beginControlFlow("if (focusable)");
 		spec.addStatement("setFocusable(titleTextView)");
@@ -439,12 +485,19 @@ class AppProfilerActivityGenerator extends Generator {
 		MethodSpec.Builder spec = MethodSpec.methodBuilder("addOptionProfiles")
 				.addModifiers(Modifier.PRIVATE, Modifier.FINAL);
 
-		spec.addStatement("$1T titleTextView = new $1T(this)", classTextView);
-		spec.addStatement("titleTextView.setTextColor(TEXT_LIGHT_COLOR)");
-		spec.addStatement("titleTextView.setTextSize($T.COMPLEX_UNIT_SP, 22)", classTypedValue);
-		spec.addStatement("titleTextView.setPadding(0,0,0, (int) (12*dp))");
-		spec.addStatement("titleTextView.setText($T.getProfile())", classAppProfiler);
-		spec.addStatement("linearLayout.addView(titleTextView)");
+		spec.addStatement("profileTextView = new $1T(this)", classTextView);
+		spec.addStatement("profileTextView.setTextColor(TEXT_LIGHT_COLOR)");
+		spec.addStatement("profileTextView.setIncludeFontPadding(false)");
+		spec.addStatement("profileTextView.setTextSize($T.COMPLEX_UNIT_SP, 22)", classTypedValue);
+		spec.addStatement("profileTextView.setText($T.getProfile())", classAppProfiler);
+		spec.addStatement("linearLayout.addView(profileTextView)");
+
+		spec.addStatement("$1T changeTextView = new $1T(this)", classTextView);
+		spec.addStatement("changeTextView.setTextColor(SECONDARY_TEXT_LIGHT_COLOR)");
+		spec.addStatement("changeTextView.setIncludeFontPadding(false)");
+		spec.addStatement("changeTextView.setTextSize($T.COMPLEX_UNIT_SP, 9)", classTypedValue);
+		spec.addStatement("changeTextView.setText($S)", "(click to change)");
+		spec.addStatement("linearLayout.addView(changeTextView)");
 
 		List<String> profiles = new ArrayList<>();
 		for (ProfileDescription profileDescription : profilerDescription.getProfiles()) {
@@ -463,7 +516,7 @@ class AppProfilerActivityGenerator extends Generator {
 						.addParameter(int.class, "which")
 						.addStatement("$T value = values[which]", String.class)
 						.addStatement("$T.setProfile(value)", classAppProfiler)
-						.addStatement("titleTextView.setText(value)")
+						.addStatement("profileTextView.setText(value)")
 						.addStatement("setupProfile(value)")
 						.addStatement("dialog.dismiss()")
 						.build())
@@ -482,7 +535,9 @@ class AppProfilerActivityGenerator extends Generator {
 						.addStatement("builder.show()")
 						.build())
 				.build();
-		spec.addStatement("titleTextView.setOnClickListener($L)", listenerSpec);
+		spec.addStatement("$T listener = $L",classViewOnClickListener,  listenerSpec);
+		spec.addStatement("profileTextView.setOnClickListener(listener)");
+		spec.addStatement("changeTextView.setOnClickListener(listener)" );
 		return spec.build();
 	}
 
@@ -497,7 +552,8 @@ class AppProfilerActivityGenerator extends Generator {
 		spec.addStatement(viewName + " = new $1T(this)", classTextView);
 		spec.addStatement(viewName + ".setText($T.valueOf($T." + (ValueType.BOOLEAN.equals(fieldDescription.getValueType()) ? "is" : "get") + fieldDescription.getCapitalizedCamelCaseName() + "()))", String.class, classAppProfiler);
 		spec.addStatement(viewName + ".setTextColor(SECONDARY_TEXT_LIGHT_COLOR)");
-		spec.addStatement(viewName + ".setTextSize($T.COMPLEX_UNIT_SP, 13)", classTypedValue);
+		spec.addStatement(viewName + ".setTextSize($T.COMPLEX_UNIT_SP, 18)", classTypedValue);
+		spec.addStatement(viewName + ".setPadding(($T)(4*dp), 0, 0, 0)", int.class);
 		spec.addStatement("linearLayout.addView(" + viewName + ")");
 		spec.addStatement("final $1T[] values = new $1T[]{$2L}", String.class, "\"" + String.join("\", \"", fieldDescription.getValues()) + "\"");
 
@@ -511,7 +567,7 @@ class AppProfilerActivityGenerator extends Generator {
 						.addParameter(int.class, "which")
 						.addStatement("$T value = values[which]", String.class)
 						.addStatement(viewName + ".setText(value)", Arrays.class)
-						.addStatement("$T.set" + fieldDescription.getCapitalizedCamelCaseName() + "(" + getValueFormat("value", fieldDescription.getValueType()) + ")", classAppProfiler, getClassForType(fieldDescription.getValueType()))
+						.addStatement("$T.set" + fieldDescription.getCapitalizedCamelCaseName() + "(($T)$T.$L.parseValue(value))", classAppProfiler, Utils.getClassFor(fieldDescription.getValueType()), ValueType.class, fieldDescription.getValueType().name())
 						.addStatement("dialog.dismiss()")
 						.build())
 				.build();
@@ -546,6 +602,7 @@ class AppProfilerActivityGenerator extends Generator {
 		spec.addStatement(viewName + " = new $1T(this)", classEditText);
 		spec.addStatement(viewName + ".setText($T.valueOf($T." + (ValueType.BOOLEAN.equals(fieldDescription.getValueType()) ? "is" : "get") + fieldDescription.getCapitalizedCamelCaseName() + "()))", String.class, classAppProfiler);
 		spec.addStatement(viewName + ".setTextColor(SECONDARY_TEXT_LIGHT_COLOR)");
+		spec.addStatement(viewName + ".setPadding(" + viewName + ".getPaddingLeft(), 0, " + viewName + ".getPaddingRight(), " + viewName + ".getPaddingBottom())");
 
 		switch (type) {
 			case INT:
@@ -581,7 +638,7 @@ class AppProfilerActivityGenerator extends Generator {
 						.addAnnotation(Override.class)
 						.addModifiers(Modifier.PUBLIC)
 						.addParameter(classEditable, "s")
-						.addStatement("$T.set" + fieldDescription.getCapitalizedCamelCaseName() + "(" + getValueFormat("s.toString()", type) + ")", classAppProfiler, getClassForType(type))
+						.addStatement("$T.set" + fieldDescription.getCapitalizedCamelCaseName() + "(($T)$T.$L.parseValue(s.toString()))", classAppProfiler, Utils.getClassFor(fieldDescription.getValueType()), ValueType.class, fieldDescription.getValueType().name())
 						.build())
 				.build();
 		spec.addStatement(viewName + ".addTextChangedListener($L)", listenerSpec);
@@ -600,6 +657,9 @@ class AppProfilerActivityGenerator extends Generator {
 		spec.addStatement(viewName + ".setTextColor(TEXT_LIGHT_COLOR)");
 		spec.addStatement(viewName + ".setTextSize($T.COMPLEX_UNIT_SP, 16)", classTypedValue);
 		spec.addStatement(viewName + ".setText($S)", fieldDescription.getLabel());
+		spec.addStatement("$1T.LayoutParams params = new $1T.LayoutParams($2T.LayoutParams.MATCH_PARENT, $2T.LayoutParams.WRAP_CONTENT)", classLinearLayoutCompat, classViewGroup);
+		spec.addStatement("params.topMargin = ($T) (12f*dp)", int.class);
+		spec.addStatement(viewName + ".setLayoutParams(params)");
 		spec.addStatement(viewName + ".setChecked($T." + (ValueType.BOOLEAN.equals(fieldDescription.getValueType()) ? "is" : "get") + fieldDescription.getCapitalizedCamelCaseName() + "())", classAppProfiler);
 
 		TypeSpec listenerSpec = TypeSpec.anonymousClassBuilder("")
@@ -617,36 +677,5 @@ class AppProfilerActivityGenerator extends Generator {
 		spec.addStatement("linearLayout.addView(" + viewName + ")");
 
 		return spec.build();
-	}
-
-	private static String getValueFormat(String paramName, ValueType type) {
-		String stringValue = paramName;
-		switch (type) {
-			case INT:
-				return "$T.parseInt(" + stringValue + ")";
-			case LONG:
-				return "$T.parseLong(" + stringValue + ")";
-			case BOOLEAN:
-				return "$T.parseBoolean(" + stringValue + ")";
-			case FLOAT:
-				return "$T.parseFloat(" + stringValue + ")";
-			default:
-				return "$T.valueOf(" + stringValue + ")";
-		}
-	}
-
-	private static Class getClassForType(ValueType type) {
-		switch (type) {
-			case INT:
-				return Integer.class;
-			case LONG:
-				return Long.class;
-			case BOOLEAN:
-				return Boolean.class;
-			case FLOAT:
-				return Float.class;
-			default:
-				return String.class;
-		}
 	}
 }
