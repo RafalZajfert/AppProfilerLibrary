@@ -7,6 +7,7 @@ sourceCompatibility = '1.8'
 dependencies {
     compile 'com.squareup:javapoet:1.9.0'
     compile project(':appprofiler')
+//    implementation 'software.rsquared:app-profiler:1.0.2'
 }
 
 Properties properties = new Properties()
@@ -17,7 +18,7 @@ properties.load(project.rootProject.file('local.properties').newDataInputStream(
 //    userOrg = 'rsquared'
 //    groupId = 'software.rsquared'
 //    artifactId = 'app-profiler-processor'
-//    publishVersion = '1.0.1'
+//    publishVersion = '1.0.2'
 //    desc = 'Library for simplify multiple environment android app deploying'
 //    website = 'https://github.com/rSquared-software/AppProfiler'
 //    bintrayUser = properties.getProperty("bintray.oss.user")

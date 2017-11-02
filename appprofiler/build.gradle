@@ -12,7 +12,7 @@ properties.load(project.rootProject.file('local.properties').newDataInputStream(
 //    userOrg = 'rsquared'
 //    groupId = 'software.rsquared'
 //    artifactId = 'app-profiler'
-//    publishVersion = '1.0.1'
+//    publishVersion = '1.0.2'
 //    desc = 'Library for simplify multiple environment android app deploying'
 //    website = 'https://github.com/rSquared-software/AppProfiler'
 //    bintrayUser = properties.getProperty("bintray.oss.user")
