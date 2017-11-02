@@ -89,7 +89,6 @@ class AnnotationParser {
 		profilerDescription.setFields(fieldDescriptions);
 		profilerDescription.setProfiles(profileDescriptions);
 		profilerDescription.setActive(profiler.active());
-		messager.printMessage(Diagnostic.Kind.NOTE, profilerDescription.toString());
 		return profilerDescription;
 	}
 }

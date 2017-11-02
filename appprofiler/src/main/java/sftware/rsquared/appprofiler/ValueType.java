@@ -8,5 +8,5 @@ public enum ValueType {
 	LONG,
 	STRING,
 	BOOLEAN,
-	FLOAT;
+	FLOAT
 }

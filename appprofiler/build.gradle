@@ -14,7 +14,7 @@ properties.load(project.rootProject.file('local.properties').newDataInputStream(
 publish {
     userOrg = 'rsquared'
     groupId = 'software.rsquared'
-    artifactId = 'appprofiler'
+    artifactId = 'app-profiler'
     publishVersion = '1.0.0'
     desc = 'Library for simplify multiple environment android app deploying'
     website = 'https://github.com/rSquared-software/AppProfiler'
