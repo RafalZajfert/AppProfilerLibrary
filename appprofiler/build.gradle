@@ -1,18 +1,25 @@
+// DEVELOPMENT
 apply plugin: 'java'
-//apply plugin: 'com.novoda.bintray-release'
 
 targetCompatibility = '1.8'
 sourceCompatibility = '1.8'
 
-Properties properties = new Properties()
-properties.load(project.rootProject.file('local.properties').newDataInputStream())
-
-//gradlew clean build bintrayUpload -PdryRun=false
+// DEPLOY
+//apply plugin: 'java'
+//apply plugin: 'com.novoda.bintray-release'
+//
+//targetCompatibility = '1.8'
+//sourceCompatibility = '1.8'
+//
+//Properties properties = new Properties()
+//properties.load(project.rootProject.file('local.properties').newDataInputStream())
+//
+////gradlew clean build bintrayUpload -PdryRun=false
 //publish {
 //    userOrg = 'rsquared'
 //    groupId = 'software.rsquared'
 //    artifactId = 'app-profiler'
-//    publishVersion = '1.0.2'
+//    publishVersion = '1.0.3'
 //    desc = 'Library for simplify multiple environment android app deploying'
 //    website = 'https://github.com/rSquared-software/AppProfiler'
 //    bintrayUser = properties.getProperty("bintray.oss.user")

@@ -4,39 +4,26 @@ import java.util.Collections;
 import java.util.Set;
 
 import javax.annotation.processing.AbstractProcessor;
-import javax.annotation.processing.Filer;
-import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.util.Elements;
 
 import sftware.rsquared.appprofiler.Profiler;
 
 
-@SupportedAnnotationTypes("sftware.rsquared.appprofiler.Profiler")
-@SupportedSourceVersion(SourceVersion.RELEASE_7)
+@SupportedAnnotationTypes("s8ftware.rsquared.appprofiler.Profiler")
+@SupportedSourceVersion(SourceVersion.RELEASE_8)
 public class AppProfilerProcessor extends AbstractProcessor {
-
-	private Filer filer;
-	private Messager messager;
-	private Elements elements;
-
 	private boolean created = false;
-
 
 	@Override
 	public synchronized void init(ProcessingEnvironment processingEnvironment) {
 		super.init(processingEnvironment);
 		Generator.init(processingEnvironment);
 		AnnotationParser.init(processingEnvironment);
-
-		filer = processingEnvironment.getFiler();
-		messager = processingEnvironment.getMessager();
-		elements = processingEnvironment.getElementUtils();
 	}
 
 	@Override

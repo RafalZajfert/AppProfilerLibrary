@@ -113,6 +113,7 @@ class AppProfilerActivityGenerator extends Generator {
 				activityClass.addField(FieldSpec.builder(int.class, "TEXT_LIGHT_COLOR", Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL).initializer("$T.parseColor($S)", classColor, "#DE000000").build());
 				activityClass.addField(FieldSpec.builder(int.class, "SECONDARY_TEXT_LIGHT_COLOR", Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL).initializer("$T.parseColor($S)", classColor, "#8A000000").build());
 				activityClass.addField(FieldSpec.builder(int.class, "SEPARATOR_COLOR", Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL).initializer("$T.parseColor($S)", classColor, "#1F000000").build());
+				activityClass.addField(FieldSpec.builder(int.class, "SEPARATOR_DARK_COLOR", Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL).initializer("$T.parseColor($S)", classColor, "#8A000000").build());
 				activityClass.addField(FieldSpec.builder(int.class, "WARNING_COLOR", Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL).initializer("$T.parseColor($S)", classColor, "#B71C1C").build());
 
 				activityClass.addField(FieldSpec.builder(classLinearLayoutCompat, "linearLayout", Modifier.PRIVATE).build());
@@ -139,6 +140,7 @@ class AppProfilerActivityGenerator extends Generator {
 				activityClass.addMethod(generateSetupProfileMethod(profilerDescription));
 				activityClass.addMethod(generateAddFocusViewMethod());
 				activityClass.addMethod(generateAddSeparatorMethod());
+				activityClass.addMethod(generateAddDarkSeparatorMethod());
 				activityClass.addMethod(generateAddProfilesOptionMethod(profilerDescription));
 				for (FieldDescription fieldDescription : profilerDescription.getFields()) {
 					if (isEditOption(fieldDescription)) {
@@ -380,7 +382,7 @@ class AppProfilerActivityGenerator extends Generator {
 		spec.endControlFlow();
 		spec.addStatement("break");
 		spec.endControlFlow();
-		spec.beginControlFlow("for (int i = 2; i < linearLayout.getChildCount(); i++)");
+		spec.beginControlFlow("for (int i = linearLayout.indexOfChild(disabledTextView) + 1; i < linearLayout.getChildCount(); i++)");
 		spec.addStatement("$T child = linearLayout.getChildAt(i)", classView);
 		spec.addStatement("child.setOnTouchListener(enabled ? null : touchListener)");
 		spec.addStatement("child.setAlpha(enabled ? 1f : 0.6f)");
@@ -424,6 +426,21 @@ class AppProfilerActivityGenerator extends Generator {
 		spec.addStatement("params.bottomMargin = ($T) (8f*dp)", int.class);
 		spec.addStatement("view.setLayoutParams(params)");
 		spec.addStatement("view.setBackgroundColor(SEPARATOR_COLOR)");
+		spec.addStatement("linearLayout.addView(view)");
+		return spec.build();
+	}
+
+	private static MethodSpec generateAddDarkSeparatorMethod() {
+		MethodSpec.Builder spec = MethodSpec.methodBuilder("addDarkSeparator")
+				.addModifiers(Modifier.PRIVATE, Modifier.FINAL);
+
+		spec.addStatement("$1T view = new $1T(this)", classView);
+		spec.addStatement("setFocusable(view)");
+		spec.addStatement("$1T.LayoutParams params = new $1T.LayoutParams($2T.LayoutParams.MATCH_PARENT, (int) (dp))", classLinearLayoutCompat, classViewGroup);
+		spec.addStatement("params.leftMargin = ($T) (4f*dp)", int.class);
+		spec.addStatement("params.rightMargin = ($T) (4f*dp)", int.class);
+		spec.addStatement("view.setLayoutParams(params)");
+		spec.addStatement("view.setBackgroundColor(SEPARATOR_DARK_COLOR)");
 		spec.addStatement("linearLayout.addView(view)");
 		return spec.build();
 	}
@@ -555,6 +572,7 @@ class AppProfilerActivityGenerator extends Generator {
 		spec.addStatement(viewName + ".setTextSize($T.COMPLEX_UNIT_SP, 18)", classTypedValue);
 		spec.addStatement(viewName + ".setPadding(($T)(4*dp), 0, 0, 0)", int.class);
 		spec.addStatement("linearLayout.addView(" + viewName + ")");
+		spec.addStatement("addDarkSeparator()");
 		spec.addStatement("final $1T[] values = new $1T[]{$2L}", String.class, "\"" + String.join("\", \"", fieldDescription.getValues()) + "\"");
 
 
