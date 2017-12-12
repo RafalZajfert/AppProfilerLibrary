@@ -18,7 +18,7 @@ dependencies {
 //
 //dependencies {
 //    compile 'com.squareup:javapoet:1.9.0'
-//    implementation 'software.rsquared:app-profiler:1.0.3'
+//    implementation 'software.rsquared:app-profiler:1.0.4'
 //}
 //
 //Properties properties = new Properties()
@@ -29,7 +29,7 @@ dependencies {
 //    userOrg = 'rsquared'
 //    groupId = 'software.rsquared'
 //    artifactId = 'app-profiler-processor'
-//    publishVersion = '1.0.3'
+//    publishVersion = '1.0.4'
 //    desc = 'Library for simplify multiple environment android app deploying'
 //    website = 'https://github.com/rSquared-software/AppProfiler'
 //    bintrayUser = properties.getProperty("bintray.oss.user")

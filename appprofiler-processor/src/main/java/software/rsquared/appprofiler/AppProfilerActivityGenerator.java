@@ -105,6 +105,7 @@ class AppProfilerActivityGenerator extends Generator {
 								.addStatement("handler.postDelayed(this, 1000)")
 								.endControlFlow()
 								.beginControlFlow("else")
+								.addStatement("dialogChangeButton.setEnabled(false)")
 								.addStatement("closeProfiler()")
 								.endControlFlow()
 								.build())
