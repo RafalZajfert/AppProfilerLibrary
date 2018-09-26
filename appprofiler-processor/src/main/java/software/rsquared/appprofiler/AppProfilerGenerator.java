@@ -7,6 +7,7 @@ import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeSpec;
 
 import java.io.IOException;
+import java.util.Set;
 
 import javax.lang.model.element.Modifier;
 import javax.tools.Diagnostic;
@@ -37,7 +38,7 @@ class AppProfilerGenerator extends Generator {
 				return;
 			}
 
-			appProfilerClass.addField(FieldSpec.builder(OnProfileChangedListener.class,"changedListener", Modifier.PRIVATE, Modifier.STATIC).build());
+			appProfilerClass.addField(FieldSpec.builder(OnProfileChangedListener.class, "changedListener", Modifier.PRIVATE, Modifier.STATIC).build());
 			if (profilerDescription.isActive()) {
 				appProfilerClass.addField(createPreferencesField());
 				appProfilerClass.addField(createProfileField());
@@ -50,7 +51,7 @@ class AppProfilerGenerator extends Generator {
 			appProfilerClass.addMethod(createGetOnProfileChangedListenerMethod());
 			if (profilerDescription.isActive()) {
 				appProfilerClass.addMethod(createCheckInit());
-				appProfilerClass.addMethod(createProfileSetter());
+				appProfilerClass.addMethod(createProfileSetter(profilerDescription.getFields()));
 			}
 			appProfilerClass.addMethod(createProfileGetter(defaultProfile.getName(), !profilerDescription.isActive()));
 
@@ -63,10 +64,10 @@ class AppProfilerGenerator extends Generator {
 				appProfilerClass.addMethod(createGetter(fieldDescription, fieldValue, !profilerDescription.isActive()));
 
 				if (profilerDescription.isActive()) {
+					appProfilerClass.addMethod(createCustomValueGetter(fieldDescription));
 					appProfilerClass.addMethod(createSetter(fieldDescription));
 				}
 			}
-
 			/**
 			 * Write generated class to a file
 			 */
@@ -126,7 +127,7 @@ class AppProfilerGenerator extends Generator {
 		return spec.build();
 	}
 
-	private static MethodSpec createProfileSetter() {
+	private static MethodSpec createProfileSetter(Set<FieldDescription> fields) {
 		MethodSpec.Builder spec = MethodSpec.methodBuilder("setProfile")
 				.addJavadoc("Current profile")
 				.addParameter(String.class, "value")
@@ -161,6 +162,24 @@ class AppProfilerGenerator extends Generator {
 		return spec.build();
 	}
 
+	private static MethodSpec createCustomValueGetter(FieldDescription fieldDescription) {
+		Class<?> type = Utils.getClassFor(fieldDescription.getValueType());
+
+		MethodSpec.Builder spec = MethodSpec.methodBuilder("get" + fieldDescription.getCapitalizedCamelCaseName() + "CustomValue")
+				.addJavadoc("Value from 'Custom' profile\n" + fieldDescription.getLabel())
+				.returns(type)
+				.addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL);
+		spec.addStatement("checkIsInitialized()");
+		spec.beginControlFlow("if (!preferences.contains($S))","CUSTOM_" + fieldDescription.getName());
+		spec.addStatement("preferences.edit()." + getPutPreferenceMethod(fieldDescription.getValueType()) + "($S, " + (ValueType.BOOLEAN.equals(fieldDescription.getValueType()) ? "is" : "get") + fieldDescription.getCapitalizedCamelCaseName() + "()).apply()", "CUSTOM_" + fieldDescription.getName());
+		spec.endControlFlow();
+//		if (!preferences.contains("CUSTOM_FIELD_5")) {
+//			;
+//		}
+		spec.addStatement("return preferences." + getGetPreferenceMethod(fieldDescription.getValueType()) + "($S, " + (ValueType.BOOLEAN.equals(fieldDescription.getValueType()) ? "is" : "get") + fieldDescription.getCapitalizedCamelCaseName() + "())", "CUSTOM_" + fieldDescription.getName());
+		return spec.build();
+	}
+
 	private static MethodSpec createSetter(FieldDescription fieldDescription) {
 		Class<?> type = Utils.getClassFor(fieldDescription.getValueType());
 
@@ -171,7 +190,14 @@ class AppProfilerGenerator extends Generator {
 
 		spec.addStatement("checkIsInitialized()");
 		spec.addStatement(fieldDescription.getCamelCaseName() + " = value");
-		spec.addStatement("preferences.edit()." + getPutPreferenceMethod(fieldDescription.getValueType()) + "($S, value).apply()", fieldDescription.getName());
+
+//		spec.beginControlFlow("if (profile.equals(\"Custom\"))");
+
+		spec.addStatement("$T.Editor editor = preferences.edit()", classSharedPreferences);
+		spec.beginControlFlow("if (profile.equals(\"Custom\"))");
+		spec.addStatement("editor." + getPutPreferenceMethod(fieldDescription.getValueType()) + "($S, value)", "CUSTOM_" + fieldDescription.getName());
+		spec.endControlFlow();
+		spec.addStatement("editor." + getPutPreferenceMethod(fieldDescription.getValueType()) + "($S, value).apply()", fieldDescription.getName());
 		return spec.build();
 	}
 

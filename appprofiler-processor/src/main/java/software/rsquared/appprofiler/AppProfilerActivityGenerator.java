@@ -106,7 +106,7 @@ class AppProfilerActivityGenerator extends Generator {
 								.endControlFlow()
 								.beginControlFlow("else")
 								.addStatement("dialogChangeButton.setEnabled(false)")
-								.addStatement("closeProfiler()")
+								.addStatement("closeProfiler(true)")
 								.endControlFlow()
 								.build())
 						.build();
@@ -131,6 +131,7 @@ class AppProfilerActivityGenerator extends Generator {
 				activityClass.addField(FieldSpec.builder(Runnable.class, "autoCloseRunnable", Modifier.PRIVATE).initializer("$L", autoCloseRunnableSpec).build());
 				activityClass.addField(FieldSpec.builder(classViewOnFocusChangeListener, "focusListener", Modifier.PRIVATE).initializer("$L", listenerSpec).build());
 				activityClass.addField(FieldSpec.builder(classOnTouchListener, "touchListener", Modifier.PRIVATE).initializer("$L", touchListenerSpec).build());
+				activityClass.addField(FieldSpec.builder(classAlertDialog, "dialog", Modifier.PRIVATE).build());
 			}
 
 			activityClass.addMethod(generateOnCreateMethod(profilerDescription));
@@ -236,8 +237,7 @@ class AppProfilerActivityGenerator extends Generator {
 							.addParameter(classDialogInterface, "dialog")
 							.addParameter(int.class, "which")
 							.addStatement("handler.removeCallbacks(autoCloseRunnable)")
-							.addStatement("dialog.dismiss()")
-							.addStatement("closeProfiler()")
+							.addStatement("closeProfiler(true)")
 							.build())
 					.build();
 
@@ -279,7 +279,7 @@ class AppProfilerActivityGenerator extends Generator {
 							.addStatement("handler.removeCallbacks(autoCloseRunnable)")
 							.addStatement("dialog.dismiss()")
 							.beginControlFlow("if(which < values.length - 1)")
-							.addStatement("closeProfiler()")
+							.addStatement("closeProfiler(false)")
 							.endControlFlow()
 							.build())
 					.build();
@@ -290,7 +290,7 @@ class AppProfilerActivityGenerator extends Generator {
 					.addStatement("builder.setSingleChoiceItems(values, $T.asList(values).indexOf($T.getProfile()), $L)", Arrays.class, classAppProfiler, dialogListenerSpec)
 					.addStatement("builder.setPositiveButton($S, $L)", "Start (5)", dialogYesListenerSpec)
 					.addStatement("builder.setNeutralButton($S, $L)", "Edit", dialogEditListenerSpec)
-					.addStatement("$T dialog = builder.create()", classAlertDialog)
+					.addStatement("dialog = builder.create()")
 					.addStatement("dialog.setOnShowListener($L)", showListenerSpec)
 					.addStatement("dialog.show()");
 
@@ -329,20 +329,26 @@ class AppProfilerActivityGenerator extends Generator {
 				.addModifiers(Modifier.PUBLIC)
 				.returns(boolean.class)
 				.addParameter(classMenuItem, "item");
-		spec.addStatement("closeProfiler()");
+		spec.addStatement("closeProfiler(false)");
 		spec.addStatement("return true");
 		return spec.build();
 	}
 
 	private static MethodSpec generateCloseProfilerMethod(String activityClass) {
 		MethodSpec.Builder spec = MethodSpec.methodBuilder("closeProfiler")
-				.addModifiers(Modifier.PRIVATE);
+				.addModifiers(Modifier.PRIVATE)
+				.addParameter(boolean.class, "closeDialog");
 		spec.addStatement("handler.removeCallbacks(autoCloseRunnable)");
 		spec.addStatement("$T listener = $T.getOnProfileChangedListener()", OnProfileChangedListener.class, classAppProfiler);
 		spec.beginControlFlow("if (listener != null)");
 		spec.addStatement("listener.onProfileChanged(false)");
 		spec.endControlFlow();
-		spec.addStatement("startActivity(new $T(this, $L.class))", classIntent, activityClass);
+		spec.beginControlFlow("if (dialog != null && closeDialog)");
+		spec.addStatement("dialog.dismiss()");
+		spec.endControlFlow();
+		spec.addStatement("$T intent = new $T()", classIntent, classIntent);
+		spec.addStatement("intent.setClassName(this, $S)",  activityClass);
+		spec.addStatement("startActivity(intent)");
 		spec.addStatement("finish()");
 		return spec.build();
 	}
@@ -377,7 +383,23 @@ class AppProfilerActivityGenerator extends Generator {
 			spec.endControlFlow();
 			spec.addStatement("break");
 		}
-		spec.addCode("case \"Custom\":\n");
+		spec.beginControlFlow("case \"Custom\":");
+		for (FieldDescription fieldDescription : profilerDescription.getFields()) {
+			boolean check;
+			if (isEditOption(fieldDescription)) {
+				check = false;
+			} else {
+				check = isCheckOption(fieldDescription);
+			}
+			if (check) {
+				spec.addStatement(fieldDescription.getCamelCaseName() + "ValueView.setChecked($T.get"+fieldDescription.getCapitalizedCamelCaseName()+"CustomValue())", classAppProfiler);
+			} else {
+				spec.addStatement(fieldDescription.getCamelCaseName() + "ValueView.setText($T.valueOf($T.get"+fieldDescription.getCapitalizedCamelCaseName()+"CustomValue()))", String.class, classAppProfiler);
+			}
+		}
+		spec.addStatement("enabled = true");
+		spec.endControlFlow();
+		spec.addStatement("break");
 		spec.beginControlFlow("default:");
 		spec.addStatement("enabled = true");
 		spec.endControlFlow();

@@ -79,12 +79,7 @@ class AnnotationParser {
 			profileDescriptions.add(profileDescription);
 		}
 
-		try {
-			profiler.startActivity();
-		} catch (javax.lang.model.type.MirroredTypeException e) {
-			profilerDescription.setActivityClass(e.getTypeMirror().toString());
-
-		}
+		profilerDescription.setActivityClass(profiler.startActivity());
 		profilerDescription.setPackageName(profiler.packageName());
 		profilerDescription.setFields(fieldDescriptions);
 		profilerDescription.setProfiles(profileDescriptions);

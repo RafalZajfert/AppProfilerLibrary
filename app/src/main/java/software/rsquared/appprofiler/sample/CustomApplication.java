@@ -13,7 +13,7 @@ import sftware.rsquared.appprofiler.ValueType;
  */
 
 @Profiler(
-		startActivity = ProfilerActivity.class,
+		startActivity = "software.rsquared.appprofiler.sample.ProfilerActivity",
 		packageName = BuildConfig.APPLICATION_ID,
 		active = true,
 		fields = {
@@ -22,7 +22,7 @@ import sftware.rsquared.appprofiler.ValueType;
 				@Profile.Field(name = "FIELD_3", label = "Field 3", valueType = ValueType.INT),
 				@Profile.Field(name = "FIELD_4", label = "Field 4", valueType = ValueType.FLOAT),
 				@Profile.Field(name = "FIELD_5", label = "Field 5", valueType = ValueType.BOOLEAN),
-				@Profile.Field(name = "FIELD_6", label = "Field 6", valueType = ValueType.BOOLEAN, defaultValue = "false" ),
+				@Profile.Field(name = "FIELD_6", label = "Field 6", valueType = ValueType.BOOLEAN, defaultValue = "false"),
 				@Profile.Field(name = "FIELD_A1", label = "Field _1", valueType = ValueType.INT, defaultValue = "1"),
 				@Profile.Field(name = "FIELD_A2", label = "Field _2", valueType = ValueType.LONG, defaultValue = "2"),
 				@Profile.Field(name = "FIELD_A3", label = "Field _3", valueType = ValueType.FLOAT, defaultValue = "1.2"),

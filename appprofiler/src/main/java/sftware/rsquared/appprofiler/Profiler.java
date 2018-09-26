@@ -11,7 +11,11 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.TYPE)
 public @interface Profiler {
-	Class<?> startActivity();
+	/**
+	 * Fully qualified activity name
+	 * @return
+	 */
+	String startActivity();
 
 	String packageName() default "sftware.rsquared.appprofiler";
 
