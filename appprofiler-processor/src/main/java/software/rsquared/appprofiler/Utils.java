@@ -154,7 +154,7 @@ class Utils {
 	 * @return value for the field or null
 	 */
 	static String getDefaultFieldValue(FieldDescription fieldDescription, ProfileDescription defaultProfile) {
-		String fieldValue = defaultProfile.getValueFor(fieldDescription.getName());
+		String fieldValue = defaultProfile == null ? null : defaultProfile.getValueFor(fieldDescription.getName());
 		if (isValueNull(fieldValue)) {
 			fieldValue = fieldDescription.getDefaultValue();
 		}
