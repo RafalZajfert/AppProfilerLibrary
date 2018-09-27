@@ -2,9 +2,6 @@ package software.rsquared.appprofiler;
 
 import java.util.Set;
 
-import sftware.rsquared.appprofiler.Profile;
-import sftware.rsquared.appprofiler.ValueType;
-
 /**
  * @author Rafał Zajfert
  */
@@ -89,13 +86,29 @@ class Utils {
 		return defaultProfile != null && defaultProfile.isDefaultProfile();
 	}
 
+	public static ProfileDescription getCustomProfile(ProfilerDescription profilerDescription) {
+		if (profilerDescription == null) {
+			return null;
+		}
+		Set<ProfileDescription> profiles = profilerDescription.getProfiles();
+		if (profiles == null || profiles.isEmpty()) {
+			return null;
+		}
+		for (ProfileDescription profile : profiles) {
+			if ("Custom".equals(profile.getName())) {
+				return profile;
+			}
+		}
+		return null;
+	}
+
 	/**
 	 * get object class for given type (e.g. {@link Integer} instead of {@code int})
 	 *
 	 * @param valueType type of value
 	 * @return class of type
 	 */
-	static Class<?> getObjectClassFor(ValueType valueType) {
+	static Class<?> getClassFor(ValueType valueType) {
 		switch (valueType) {
 			case INT:
 				return Integer.class;
@@ -111,27 +124,6 @@ class Utils {
 		}
 	}
 
-	/**
-	 * get class for given type - can be primitive class
-	 *
-	 * @param valueType type of value
-	 * @return class of type
-	 */
-	static Class<?> getClassFor(ValueType valueType) {
-		switch (valueType) {
-			case INT:
-				return int.class;
-			case LONG:
-				return long.class;
-			case BOOLEAN:
-				return boolean.class;
-			case FLOAT:
-				return float.class;
-			case STRING:
-			default:
-				return String.class;
-		}
-	}
 
 	/**
 	 * get format of value for given type

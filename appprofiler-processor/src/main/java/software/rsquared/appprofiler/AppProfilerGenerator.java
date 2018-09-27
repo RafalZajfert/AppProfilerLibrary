@@ -12,9 +12,6 @@ import java.util.Set;
 import javax.lang.model.element.Modifier;
 import javax.tools.Diagnostic;
 
-import sftware.rsquared.appprofiler.OnProfileChangedListener;
-import sftware.rsquared.appprofiler.ValueType;
-
 /**
  * @author Rafał Zajfert
  */
@@ -33,6 +30,7 @@ class AppProfilerGenerator extends Generator {
 					.addModifiers(Modifier.PUBLIC, Modifier.FINAL);
 
 			ProfileDescription defaultProfile = Utils.getDefaultOrFirstProfile(profilerDescription);
+			ProfileDescription customProfile = Utils.getCustomProfile(profilerDescription);
 			if (defaultProfile == null) {
 				messager.printMessage(Diagnostic.Kind.ERROR, "AppProfiler need at least one default profile");
 				return;
@@ -58,13 +56,10 @@ class AppProfilerGenerator extends Generator {
 
 			for (FieldDescription fieldDescription : profilerDescription.getFields()) {
 				String fieldValue = Utils.getDefaultFieldValue(fieldDescription, defaultProfile);
-				if (fieldValue == null) {
-					continue;
-				}
 				appProfilerClass.addMethod(createGetter(fieldDescription, fieldValue, !profilerDescription.isActive()));
 
 				if (profilerDescription.isActive()) {
-					appProfilerClass.addMethod(createCustomValueGetter(fieldDescription));
+					appProfilerClass.addMethod(createCustomValueGetter(fieldDescription, Utils.getDefaultFieldValue(fieldDescription, customProfile)));
 					appProfilerClass.addMethod(createSetter(fieldDescription));
 				}
 			}
@@ -140,7 +135,7 @@ class AppProfilerGenerator extends Generator {
 	}
 
 	private static FieldSpec createField(FieldDescription fieldDescription) {
-		return FieldSpec.builder(Utils.getObjectClassFor(fieldDescription.getValueType()), fieldDescription.getCamelCaseName(), Modifier.PRIVATE, Modifier.STATIC).build();
+		return FieldSpec.builder(Utils.getClassFor(fieldDescription.getValueType()), fieldDescription.getCamelCaseName(), Modifier.PRIVATE, Modifier.STATIC).build();
 	}
 
 	private static MethodSpec createGetter(FieldDescription fieldDescription, String fieldValue, boolean withoutPreferences) {
@@ -153,7 +148,7 @@ class AppProfilerGenerator extends Generator {
 		if (!withoutPreferences) {
 			spec.addStatement("checkIsInitialized()");
 			spec.beginControlFlow("if (" + fieldDescription.getCamelCaseName() + " == null)");
-			spec.addStatement(fieldDescription.getCamelCaseName() + " = preferences." + getGetPreferenceMethod(fieldDescription.getValueType()) + "($S, " + Utils.getTypeFormat(fieldDescription.getValueType()) + ")", fieldDescription.getName(), fieldValue);
+			spec.addStatement(fieldDescription.getCamelCaseName() + " = " + (fieldValue == null ? "!preferences.contains(\"" + fieldDescription.getName() + "\") ? null : " : "") + "preferences." + getGetPreferenceMethod(fieldDescription.getValueType()) + "($S, " + Utils.getTypeFormat(fieldDescription.getValueType()) + ")", fieldDescription.getName(), getFieldValueOrDefault(fieldValue, fieldDescription.getValueType()));
 			spec.endControlFlow();
 			spec.addStatement("return " + fieldDescription.getCamelCaseName());
 		} else {
@@ -162,7 +157,7 @@ class AppProfilerGenerator extends Generator {
 		return spec.build();
 	}
 
-	private static MethodSpec createCustomValueGetter(FieldDescription fieldDescription) {
+	private static MethodSpec createCustomValueGetter(FieldDescription fieldDescription, String fieldValue) {
 		Class<?> type = Utils.getClassFor(fieldDescription.getValueType());
 
 		MethodSpec.Builder spec = MethodSpec.methodBuilder("get" + fieldDescription.getCapitalizedCamelCaseName() + "CustomValue")
@@ -170,13 +165,7 @@ class AppProfilerGenerator extends Generator {
 				.returns(type)
 				.addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL);
 		spec.addStatement("checkIsInitialized()");
-		spec.beginControlFlow("if (!preferences.contains($S))","CUSTOM_" + fieldDescription.getName());
-		spec.addStatement("preferences.edit()." + getPutPreferenceMethod(fieldDescription.getValueType()) + "($S, " + (ValueType.BOOLEAN.equals(fieldDescription.getValueType()) ? "is" : "get") + fieldDescription.getCapitalizedCamelCaseName() + "()).apply()", "CUSTOM_" + fieldDescription.getName());
-		spec.endControlFlow();
-//		if (!preferences.contains("CUSTOM_FIELD_5")) {
-//			;
-//		}
-		spec.addStatement("return preferences." + getGetPreferenceMethod(fieldDescription.getValueType()) + "($S, " + (ValueType.BOOLEAN.equals(fieldDescription.getValueType()) ? "is" : "get") + fieldDescription.getCapitalizedCamelCaseName() + "())", "CUSTOM_" + fieldDescription.getName());
+		spec.addStatement("return " + (fieldValue == null ? "!preferences.contains(\"" + "CUSTOM_" + fieldDescription.getName() + "\") ? null : " : "") + " preferences." + getGetPreferenceMethod(fieldDescription.getValueType()) + "($S, " + Utils.getTypeFormat(fieldDescription.getValueType()) + ")", "CUSTOM_" + fieldDescription.getName(), getFieldValueOrDefault(fieldValue, fieldDescription.getValueType()));
 		return spec.build();
 	}
 
@@ -191,13 +180,18 @@ class AppProfilerGenerator extends Generator {
 		spec.addStatement("checkIsInitialized()");
 		spec.addStatement(fieldDescription.getCamelCaseName() + " = value");
 
-//		spec.beginControlFlow("if (profile.equals(\"Custom\"))");
-
 		spec.addStatement("$T.Editor editor = preferences.edit()", classSharedPreferences);
-		spec.beginControlFlow("if (profile.equals(\"Custom\"))");
-		spec.addStatement("editor." + getPutPreferenceMethod(fieldDescription.getValueType()) + "($S, value)", "CUSTOM_" + fieldDescription.getName());
-		spec.endControlFlow();
+		spec.beginControlFlow("if (value == null)");
+		spec.addStatement("if (profile.equals(\"Custom\")) editor.remove($S)", "CUSTOM_" + fieldDescription.getName());
+		spec.addStatement("editor.remove($S).apply()", fieldDescription.getName());
+		spec.nextControlFlow("else");
+
+		spec.addStatement("if (profile.equals(\"Custom\")) editor." + getPutPreferenceMethod(fieldDescription.getValueType()) + "($S, value)", "CUSTOM_" + fieldDescription.getName());
 		spec.addStatement("editor." + getPutPreferenceMethod(fieldDescription.getValueType()) + "($S, value).apply()", fieldDescription.getName());
+
+		spec.endControlFlow();
+		spec.addStatement("editor.apply()");
+
 		return spec.build();
 	}
 
@@ -210,6 +204,27 @@ class AppProfilerGenerator extends Generator {
 		spec.addStatement("throw new $T($S)", IllegalStateException.class, "Profiler is not initialized, call AppProfiler.init(context); in Application class");
 		spec.endControlFlow();
 		return spec.build();
+	}
+
+
+	private static Object getFieldValueOrDefault(String fieldValue, ValueType valueType) {
+		if (fieldValue == null) {
+			switch (valueType) {
+				case INT:
+					return "0";
+				case LONG:
+					return "0";
+				case BOOLEAN:
+					return "false";
+				case FLOAT:
+					return "0";
+				case STRING:
+				default:
+					return null;
+			}
+		} else {
+			return fieldValue;
+		}
 	}
 
 

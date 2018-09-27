@@ -1,4 +1,4 @@
-package sftware.rsquared.appprofiler;
+package software.rsquared.appprofiler;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

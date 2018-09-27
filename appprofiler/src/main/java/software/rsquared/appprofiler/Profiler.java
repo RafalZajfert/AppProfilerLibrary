@@ -1,4 +1,4 @@
-package sftware.rsquared.appprofiler;
+package software.rsquared.appprofiler;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -17,7 +17,7 @@ public @interface Profiler {
 	 */
 	String startActivity();
 
-	String packageName() default "sftware.rsquared.appprofiler";
+	String packageName() default "software.rsquared.appprofiler";
 
 	boolean active() default true;
 

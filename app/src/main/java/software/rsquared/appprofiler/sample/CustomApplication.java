@@ -2,10 +2,10 @@ package software.rsquared.appprofiler.sample;
 
 import android.app.Application;
 
-import sftware.rsquared.appprofiler.OnProfileChangedListener;
-import sftware.rsquared.appprofiler.Profile;
-import sftware.rsquared.appprofiler.Profiler;
-import sftware.rsquared.appprofiler.ValueType;
+import software.rsquared.appprofiler.OnProfileChangedListener;
+import software.rsquared.appprofiler.Profile;
+import software.rsquared.appprofiler.Profiler;
+import software.rsquared.appprofiler.ValueType;
 
 
 /**
@@ -21,6 +21,7 @@ import sftware.rsquared.appprofiler.ValueType;
 				@Profile.Field(name = "FIELD_2", label = "Field 2", valueType = ValueType.STRING, values = {"1", "2", "3", "4"}),
 				@Profile.Field(name = "FIELD_3", label = "Field 3", valueType = ValueType.INT),
 				@Profile.Field(name = "FIELD_4", label = "Field 4", valueType = ValueType.FLOAT),
+				@Profile.Field(name = "FIELD_B4", label = "Field B4", valueType = ValueType.STRING),
 				@Profile.Field(name = "FIELD_5", label = "Field 5", valueType = ValueType.BOOLEAN),
 				@Profile.Field(name = "FIELD_6", label = "Field 6", valueType = ValueType.BOOLEAN, defaultValue = "false"),
 				@Profile.Field(name = "FIELD_A1", label = "Field _1", valueType = ValueType.INT, defaultValue = "1"),
@@ -31,7 +32,10 @@ import sftware.rsquared.appprofiler.ValueType;
 				@Profile.Field(name = "FIELD_A6", label = "Field _6", valueType = ValueType.STRING, defaultValue = "test")
 		},
 		defaultProfiles = {
-				@Profile(name = "Alpha", defaultProfile = true, values = {
+				@Profile(name = "Custom", values = {
+						@Profile.Value(name = "FIELD_2", value = "114"),
+				}),
+				@Profile(name = "Alpha", values = {
 						@Profile.Value(name = "FIELD_1"),
 						@Profile.Value(name = "FIELD_2", value = "4"),
 						@Profile.Value(name = "FIELD_3", value = "1"),

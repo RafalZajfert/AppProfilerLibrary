@@ -11,8 +11,6 @@ import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
 
-import sftware.rsquared.appprofiler.Profiler;
-
 
 @SupportedAnnotationTypes("s8ftware.rsquared.appprofiler.Profiler")
 @SupportedSourceVersion(SourceVersion.RELEASE_8)

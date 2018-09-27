@@ -15,9 +15,6 @@ import java.util.List;
 import javax.lang.model.element.Modifier;
 import javax.tools.Diagnostic;
 
-import sftware.rsquared.appprofiler.OnProfileChangedListener;
-import sftware.rsquared.appprofiler.ValueType;
-
 /**
  * @author Rafał Zajfert
  */
@@ -224,7 +221,9 @@ class AppProfilerActivityGenerator extends Generator {
 
 			List<String> profiles = new ArrayList<>();
 			for (ProfileDescription profileDescription : profilerDescription.getProfiles()) {
+				if (!"Custom".equals(profileDescription.getName())){
 				profiles.add(profileDescription.getName());
+				}
 			}
 			profiles.add("Custom");
 			spec.addStatement("final $1T[] values = new $1T[]{$2L}", String.class, "\"" + String.join("\", \"", profiles) + "\"");
@@ -347,7 +346,7 @@ class AppProfilerActivityGenerator extends Generator {
 		spec.addStatement("dialog.dismiss()");
 		spec.endControlFlow();
 		spec.addStatement("$T intent = new $T()", classIntent, classIntent);
-		spec.addStatement("intent.setClassName(this, $S)",  activityClass);
+		spec.addStatement("intent.setClassName(this, $S)", activityClass);
 		spec.addStatement("startActivity(intent)");
 		spec.addStatement("finish()");
 		return spec.build();
@@ -361,6 +360,9 @@ class AppProfilerActivityGenerator extends Generator {
 		spec.addStatement("$T enabled = false", boolean.class);
 		spec.beginControlFlow("switch (profile)");
 		for (ProfileDescription profileDescription : profilerDescription.getProfiles()) {
+			if ("Custom".equals(profileDescription.getName())) {
+				continue;
+			}
 			spec.beginControlFlow("case $S:", profileDescription.getName());
 			for (FieldDescription fieldDescription : profilerDescription.getFields()) {
 				boolean check;
@@ -372,10 +374,19 @@ class AppProfilerActivityGenerator extends Generator {
 					check = false;
 				}
 
+				String value = Utils.getDefaultFieldValue(fieldDescription, profileDescription);
 				if (check) {
-					spec.addStatement(fieldDescription.getCamelCaseName() + "ValueView.setChecked(" + Utils.getTypeFormat(fieldDescription.getValueType()) + ")", Utils.getDefaultFieldValue(fieldDescription, profileDescription));
+					if (value == null) {
+						spec.addStatement(fieldDescription.getCamelCaseName() + "ValueView.setChecked(false)");
+					} else {
+						spec.addStatement(fieldDescription.getCamelCaseName() + "ValueView.setChecked(Boolean.TRUE.equals(" + Utils.getTypeFormat(fieldDescription.getValueType()) + "))", value);
+					}
 				} else {
-					spec.addStatement(fieldDescription.getCamelCaseName() + "ValueView.setText($T.valueOf(" + Utils.getTypeFormat(fieldDescription.getValueType()) + "))", String.class, Utils.getDefaultFieldValue(fieldDescription, profileDescription));
+					if (value == null) {
+						spec.addStatement(fieldDescription.getCamelCaseName() + "ValueView.setText(null)");
+					} else {
+						spec.addStatement(fieldDescription.getCamelCaseName() + "ValueView.setText($T.valueOf(" + Utils.getTypeFormat(fieldDescription.getValueType()) + "))", String.class, value);
+					}
 				}
 			}
 
@@ -384,6 +395,8 @@ class AppProfilerActivityGenerator extends Generator {
 			spec.addStatement("break");
 		}
 		spec.beginControlFlow("case \"Custom\":");
+
+		spec.addStatement("Object value");
 		for (FieldDescription fieldDescription : profilerDescription.getFields()) {
 			boolean check;
 			if (isEditOption(fieldDescription)) {
@@ -391,10 +404,12 @@ class AppProfilerActivityGenerator extends Generator {
 			} else {
 				check = isCheckOption(fieldDescription);
 			}
+
+			spec.addStatement("value = $T.get" + fieldDescription.getCapitalizedCamelCaseName() + "CustomValue()", classAppProfiler);
 			if (check) {
-				spec.addStatement(fieldDescription.getCamelCaseName() + "ValueView.setChecked($T.get"+fieldDescription.getCapitalizedCamelCaseName()+"CustomValue())", classAppProfiler);
+				spec.addStatement(fieldDescription.getCamelCaseName() + "ValueView.setChecked(Boolean.TRUE.equals(value))");
 			} else {
-				spec.addStatement(fieldDescription.getCamelCaseName() + "ValueView.setText($T.valueOf($T.get"+fieldDescription.getCapitalizedCamelCaseName()+"CustomValue()))", String.class, classAppProfiler);
+				spec.addStatement(fieldDescription.getCamelCaseName() + "ValueView.setText(value == null ? null : $T.valueOf(value))", String.class);
 			}
 		}
 		spec.addStatement("enabled = true");
@@ -541,7 +556,9 @@ class AppProfilerActivityGenerator extends Generator {
 
 		List<String> profiles = new ArrayList<>();
 		for (ProfileDescription profileDescription : profilerDescription.getProfiles()) {
-			profiles.add(profileDescription.getName());
+			if (!"Custom".equals(profileDescription.getName())){
+				profiles.add(profileDescription.getName());
+			}
 		}
 		profiles.add("Custom");
 
@@ -575,9 +592,9 @@ class AppProfilerActivityGenerator extends Generator {
 						.addStatement("builder.show()")
 						.build())
 				.build();
-		spec.addStatement("$T listener = $L",classViewOnClickListener,  listenerSpec);
+		spec.addStatement("$T listener = $L", classViewOnClickListener, listenerSpec);
 		spec.addStatement("profileTextView.setOnClickListener(listener)");
-		spec.addStatement("changeTextView.setOnClickListener(listener)" );
+		spec.addStatement("changeTextView.setOnClickListener(listener)");
 		return spec.build();
 	}
 
@@ -679,7 +696,7 @@ class AppProfilerActivityGenerator extends Generator {
 						.addAnnotation(Override.class)
 						.addModifiers(Modifier.PUBLIC)
 						.addParameter(classEditable, "s")
-						.addStatement("$T.set" + fieldDescription.getCapitalizedCamelCaseName() + "(($T)$T.$L.parseValue(s.toString()))", classAppProfiler, Utils.getClassFor(fieldDescription.getValueType()), ValueType.class, fieldDescription.getValueType().name())
+						.addStatement("$T.set" + fieldDescription.getCapitalizedCamelCaseName() + "(s.length() > 0 ? ($T)$T.$L.parseValue(s.toString()) : null)", classAppProfiler, Utils.getClassFor(fieldDescription.getValueType()), ValueType.class, fieldDescription.getValueType().name())
 						.build())
 				.build();
 		spec.addStatement(viewName + ".addTextChangedListener($L)", listenerSpec);
@@ -701,7 +718,8 @@ class AppProfilerActivityGenerator extends Generator {
 		spec.addStatement("$1T.LayoutParams params = new $1T.LayoutParams($2T.LayoutParams.MATCH_PARENT, $2T.LayoutParams.WRAP_CONTENT)", classLinearLayoutCompat, classViewGroup);
 		spec.addStatement("params.topMargin = ($T) (12f*dp)", int.class);
 		spec.addStatement(viewName + ".setLayoutParams(params)");
-		spec.addStatement(viewName + ".setChecked($T." + (ValueType.BOOLEAN.equals(fieldDescription.getValueType()) ? "is" : "get") + fieldDescription.getCapitalizedCamelCaseName() + "())", classAppProfiler);
+
+		spec.addStatement(viewName + ".setChecked(Boolean.TRUE.equals($T.is" + fieldDescription.getCapitalizedCamelCaseName()+"()))", classAppProfiler);
 
 		TypeSpec listenerSpec = TypeSpec.anonymousClassBuilder("")
 				.addSuperinterface(classOnCheckedChangeListener)

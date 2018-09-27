@@ -9,9 +9,7 @@ import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
 import javax.tools.Diagnostic;
 
-import sftware.rsquared.appprofiler.Profile;
-import sftware.rsquared.appprofiler.Profiler;
-import sftware.rsquared.appprofiler.ValueType;
+
 
 /**
  * @author Rafał Zajfert

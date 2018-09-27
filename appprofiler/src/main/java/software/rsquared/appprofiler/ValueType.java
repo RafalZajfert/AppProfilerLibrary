@@ -1,4 +1,4 @@
-package sftware.rsquared.appprofiler;
+package software.rsquared.appprofiler;
 
 /**
  * @author Rafal Zajfert

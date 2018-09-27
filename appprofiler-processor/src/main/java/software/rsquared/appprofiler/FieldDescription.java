@@ -2,8 +2,6 @@ package software.rsquared.appprofiler;
 
 import java.util.Arrays;
 
-import sftware.rsquared.appprofiler.ValueType;
-
 /**
  * @author Rafal Zajfert
  */
