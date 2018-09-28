@@ -163,7 +163,7 @@ class AppProfilerGenerator extends Generator {
 		MethodSpec.Builder spec = MethodSpec.methodBuilder("get" + fieldDescription.getCapitalizedCamelCaseName() + "CustomValue")
 				.addJavadoc("Value from 'Custom' profile\n" + fieldDescription.getLabel())
 				.returns(type)
-				.addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL);
+				.addModifiers(Modifier.PROTECTED, Modifier.STATIC, Modifier.FINAL);
 		spec.addStatement("checkIsInitialized()");
 		spec.addStatement("return " + (fieldValue == null ? "!preferences.contains(\"" + "CUSTOM_" + fieldDescription.getName() + "\") ? null : " : "") + " preferences." + getGetPreferenceMethod(fieldDescription.getValueType()) + "($S, " + Utils.getTypeFormat(fieldDescription.getValueType()) + ")", "CUSTOM_" + fieldDescription.getName(), getFieldValueOrDefault(fieldValue, fieldDescription.getValueType()));
 		return spec.build();
