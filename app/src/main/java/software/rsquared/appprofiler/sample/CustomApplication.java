@@ -15,6 +15,7 @@ import software.rsquared.appprofiler.ValueType;
 @Profiler(
 		startActivity = "software.rsquared.appprofiler.sample.ProfilerActivity",
 		packageName = BuildConfig.APPLICATION_ID,
+		useAndroidX = false,
 		active = true,
 		fields = {
 				@Profile.Field(name = "FIELD_1", label = "Field 1", valueType = ValueType.INT, values = {"1", "2", "3", "4"}, defaultValue = "2"),

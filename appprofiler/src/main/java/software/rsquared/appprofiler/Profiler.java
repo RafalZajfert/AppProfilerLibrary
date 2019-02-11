@@ -21,6 +21,8 @@ public @interface Profiler {
 
 	boolean active() default true;
 
+	boolean useAndroidX() default false;
+
 	Profile.Field[] fields();
 
 	Profile[] defaultProfiles() default {};

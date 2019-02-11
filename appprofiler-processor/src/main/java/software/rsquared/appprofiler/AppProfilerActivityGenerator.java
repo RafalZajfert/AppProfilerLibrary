@@ -24,43 +24,62 @@ class AppProfilerActivityGenerator extends Generator {
 	private static final ClassName classDialogInterface = ClassName.get("android.content", "DialogInterface");
 	private static final ClassName classDialogInterfaceOnClickListener = ClassName.get("android.content.DialogInterface", "OnClickListener");
 	private static final ClassName classDialogInterfaceOnShowListener = ClassName.get("android.content.DialogInterface", "OnShowListener");
+
 	private static final ClassName classIntent = ClassName.get("android.content", "Intent");
 	private static final ClassName classColor = ClassName.get("android.graphics", "Color");
+
 	private static final ClassName classBundle = ClassName.get("android.os", "Bundle");
 	private static final ClassName classHandler = ClassName.get("android.os", "Handler");
-	private static final ClassName classMotionEvent = ClassName.get("android.view", "MotionEvent");
-	private static final ClassName classOnTouchListener = ClassName.get("android.view.View", "OnTouchListener");
 	private static final ClassName classLooper = ClassName.get("android.os", "Looper");
-	private static final ClassName classAlertDialog = ClassName.get("android.support.v7.app", "AlertDialog");
-	private static final ClassName classAppCompatActivity = ClassName.get("android.support.v7.app", "AppCompatActivity");
-	private static final ClassName classLinearLayoutCompat = ClassName.get("android.support.v7.widget", "LinearLayoutCompat");
+
+	private static ClassName classAlertDialog = ClassName.get("android.support.v7.app", "AlertDialog");
+	private static ClassName classAppCompatActivity = ClassName.get("android.support.v7.app", "AppCompatActivity");
+	private static ClassName classCheckBox = ClassName.get("android.support.v7.widget", "AppCompatCheckBox");
+	private static ClassName classEditText = ClassName.get("android.support.v7.widget", "AppCompatEditText");
+	private static ClassName classTextView = ClassName.get("android.support.v7.widget", "AppCompatTextView");
+	private static ClassName classLinearLayoutCompat = ClassName.get("android.support.v7.widget", "LinearLayoutCompat");
+
+	private static final ClassName classEditable = ClassName.get("android.text", "Editable");
+	private static final ClassName classInputType = ClassName.get("android.text", "InputType");
+	private static final ClassName classTextWatcher = ClassName.get("android.text", "TextWatcher");
+
 	private static final ClassName classTypedValue = ClassName.get("android.util", "TypedValue");
+
 	private static final ClassName classMenu = ClassName.get("android.view", "Menu");
 	private static final ClassName classMenuItem = ClassName.get("android.view", "MenuItem");
+	private static final ClassName classMotionEvent = ClassName.get("android.view", "MotionEvent");
 	private static final ClassName classView = ClassName.get("android.view", "View");
 	private static final ClassName classViewOnClickListener = ClassName.get("android.view.View", "OnClickListener");
 	private static final ClassName classViewOnFocusChangeListener = ClassName.get("android.view.View", "OnFocusChangeListener");
+	private static final ClassName classOnTouchListener = ClassName.get("android.view.View", "OnTouchListener");
 	private static final ClassName classViewGroup = ClassName.get("android.view", "ViewGroup");
 	private static final ClassName classInputMethodManager = ClassName.get("android.view.inputmethod", "InputMethodManager");
-	private static final ClassName classEditText = ClassName.get("android.support.v7.widget", "AppCompatEditText");
-	private static final ClassName classScrollView = ClassName.get("android.widget", "ScrollView");
-	private static final ClassName classTextView = ClassName.get("android.support.v7.widget", "AppCompatTextView");
-	private static final ClassName classCheckBox = ClassName.get("android.support.v7.widget", "AppCompatCheckBox");
+
 	private static final ClassName classButton = ClassName.get("android.widget", "Button");
-	private static final ClassName classTextWatcher = ClassName.get("android.text", "TextWatcher");
-	private static final ClassName classEditable = ClassName.get("android.text", "Editable");
-	private static final ClassName classInputType = ClassName.get("android.text", "InputType");
 	private static final ClassName classCompoundButton = ClassName.get("android.widget", "CompoundButton");
 	private static final ClassName classOnCheckedChangeListener = ClassName.get("android.widget.CompoundButton", "OnCheckedChangeListener");
+	private static final ClassName classScrollView = ClassName.get("android.widget", "ScrollView");
 
 
 	public static void generate(ProfilerDescription profilerDescription) {
 		try {
+
+			if (profilerDescription.isUseAndroidX()){
+			   classAlertDialog = ClassName.get("androidx.appcompat.app", "AlertDialog");
+			   classAppCompatActivity = ClassName.get("androidx.appcompat.app", "AppCompatActivity");
+			   classCheckBox = ClassName.get("androidx.appcompat.widget", "AppCompatCheckBox");
+			   classEditText = ClassName.get("androidx.appcompat.widget", "AppCompatEditText");
+			   classTextView = ClassName.get("androidx.appcompat.widget", "AppCompatTextView");
+			   classLinearLayoutCompat = ClassName.get("androidx.appcompat.widget", "LinearLayoutCompat");
+			}
+
 			// Generate a class
 			TypeSpec.Builder activityClass = TypeSpec
 					.classBuilder("AppProfilerActivity")
 					.addModifiers(Modifier.PUBLIC, Modifier.FINAL)
 					.superclass(classAppCompatActivity);
+
+
 
 			classAppProfiler = ClassName.get(profilerDescription.getPackageName(), "AppProfiler");
 			if (profilerDescription.isActive()) {
@@ -221,8 +240,8 @@ class AppProfilerActivityGenerator extends Generator {
 
 			List<String> profiles = new ArrayList<>();
 			for (ProfileDescription profileDescription : profilerDescription.getProfiles()) {
-				if (!"Custom".equals(profileDescription.getName())){
-				profiles.add(profileDescription.getName());
+				if (!"Custom".equals(profileDescription.getName())) {
+					profiles.add(profileDescription.getName());
 				}
 			}
 			profiles.add("Custom");
@@ -294,7 +313,9 @@ class AppProfilerActivityGenerator extends Generator {
 					.addStatement("dialog.show()");
 
 		} else {
-			spec.addStatement("startActivity(new $T(this, $L.class))", classIntent, profilerDescription.getActivityClass());
+			spec.addStatement("$T intent = new $T()", classIntent, classIntent);
+			spec.addStatement("intent.setClassName(this, $S)", profilerDescription.getActivityClass());
+			spec.addStatement("startActivity(intent)");
 			spec.addStatement("finish()");
 		}
 		return spec.build();
@@ -556,7 +577,7 @@ class AppProfilerActivityGenerator extends Generator {
 
 		List<String> profiles = new ArrayList<>();
 		for (ProfileDescription profileDescription : profilerDescription.getProfiles()) {
-			if (!"Custom".equals(profileDescription.getName())){
+			if (!"Custom".equals(profileDescription.getName())) {
 				profiles.add(profileDescription.getName());
 			}
 		}
@@ -719,7 +740,7 @@ class AppProfilerActivityGenerator extends Generator {
 		spec.addStatement("params.topMargin = ($T) (12f*dp)", int.class);
 		spec.addStatement(viewName + ".setLayoutParams(params)");
 
-		spec.addStatement(viewName + ".setChecked(Boolean.TRUE.equals($T.is" + fieldDescription.getCapitalizedCamelCaseName()+"()))", classAppProfiler);
+		spec.addStatement(viewName + ".setChecked(Boolean.TRUE.equals($T.is" + fieldDescription.getCapitalizedCamelCaseName() + "()))", classAppProfiler);
 
 		TypeSpec listenerSpec = TypeSpec.anonymousClassBuilder("")
 				.addSuperinterface(classOnCheckedChangeListener)

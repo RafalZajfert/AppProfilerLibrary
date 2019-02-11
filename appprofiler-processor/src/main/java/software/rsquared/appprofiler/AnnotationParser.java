@@ -82,6 +82,7 @@ class AnnotationParser {
 		profilerDescription.setFields(fieldDescriptions);
 		profilerDescription.setProfiles(profileDescriptions);
 		profilerDescription.setActive(profiler.active());
+		profilerDescription.setUseAndroidX(profiler.useAndroidX());
 		return profilerDescription;
 	}
 }

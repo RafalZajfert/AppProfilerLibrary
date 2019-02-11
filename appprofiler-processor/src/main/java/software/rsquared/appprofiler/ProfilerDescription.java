@@ -14,6 +14,8 @@ class ProfilerDescription {
 
 	private boolean active;
 
+	private boolean useAndroidX = false;
+
 	private Set<FieldDescription> fields;
 
 	private Set<ProfileDescription> profiles;
@@ -58,12 +60,21 @@ class ProfilerDescription {
 		this.profiles = profiles;
 	}
 
+	public boolean isUseAndroidX() {
+		return useAndroidX;
+	}
+
+	public void setUseAndroidX(boolean useAndroidX) {
+		this.useAndroidX = useAndroidX;
+	}
+
 	@Override
 	public String toString() {
 		return "ProfilerDescription{" +
 				"activityClass='" + activityClass + '\'' +
 				", packageName='" + packageName + '\'' +
 				", active=" + active +
+				", useAndroidX=" + useAndroidX +
 				", fields=" + (fields == null ? "null" : Arrays.toString(fields.toArray())) +
 				", profiles=" + (profiles == null ? "null" : Arrays.toString(profiles.toArray())) +
 				'}';
